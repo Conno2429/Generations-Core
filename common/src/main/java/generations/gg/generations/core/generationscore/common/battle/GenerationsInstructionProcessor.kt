@@ -12,11 +12,14 @@ import com.cobblemon.mod.common.api.moves.Moves
 import com.cobblemon.mod.common.api.pokemon.feature.FlagSpeciesFeature
 import com.cobblemon.mod.common.api.pokemon.feature.SpeciesFeature
 import com.cobblemon.mod.common.api.pokemon.feature.StringSpeciesFeature
+import com.cobblemon.mod.common.api.scheduling.afterOnServer
 import com.cobblemon.mod.common.battles.pokemon.BattlePokemon
 import com.cobblemon.mod.common.net.messages.client.battle.BattleInitializePacket
 import com.cobblemon.mod.common.net.messages.client.battle.BattleTransformPokemonPacket
+import com.cobblemon.mod.common.net.messages.client.pokemon.update.BenchedMovesUpdatePacket
 import com.cobblemon.mod.common.pokemon.Pokemon
 import com.cobblemon.mod.common.util.server
+import generations.gg.generations.core.generationscore.common.util.removeCosmeticFeature
 import generations.gg.generations.core.generationscore.common.util.replaceMove
 import java.util.UUID
 
@@ -107,7 +110,13 @@ object GenerationsInstructionProcessor {
         val battle = battleStartedPreEvent.battle
         for (actors in battle.actors) {
             for (battlePokemon in actors.pokemonList) {
-                doggoMoveChanger(battlePokemon)
+                battlePokemon.originalPokemon.removeCosmeticFeature()
+                if (battlePokemon.originalPokemon.species.name == "Zacian" || battlePokemon.originalPokemon.species.name == "Zamazenta") {
+                    val hasBehemoth = battlePokemon.moveSet.any { it.template.name.contains("behemoth") }
+                    if (!hasBehemoth) {
+                        doggoMoveChanger(battlePokemon)
+                    }
+                }
             }
         }
     }
@@ -213,9 +222,6 @@ private fun getPlayerFromUUID(uuid: UUID): ServerPlayer? {
 
 private fun doggoMoveChanger(battlePokemon: BattlePokemon) {
     val effectedPokemon = battlePokemon.effectedPokemon
-    val ironHead = Moves.getByNameOrDummy("ironhead")
-    val behemothBlade = Moves.getByNameOrDummy("behemothblade")
-    val behemothBash = Moves.getByNameOrDummy("behemothbash")
 
     val speciesName = battlePokemon.originalPokemon.species.name.lowercase()
 
@@ -226,17 +232,12 @@ private fun doggoMoveChanger(battlePokemon: BattlePokemon) {
     if (effectedPokemon.aspects.contains("crowned")) {
         val benchedMoves = effectedPokemon.benchedMoves
 
-        println("PRE-CLEAR")
-        benchedMoves.forEach {
-            println("benchedmove: " + it.moveTemplate.name)
+        for (benchedMove in benchedMoves) {
+            if (benchedMove.moveTemplate.name == "behemothblade" || benchedMove.moveTemplate.name == "behemothbash") {
+                benchedMoves.remove(benchedMove)
+            }
         }
 
-        benchedMoves.clear()
-
-        println("POST-CLEAR")
-        benchedMoves.forEach {
-            println("benchedmove: " + it.moveTemplate.name)
-        }
         if (hasIronHead) {
             when (speciesName) {
                 "zacian" -> effectedPokemon.replaceMove("ironhead", "behemothblade")
@@ -245,10 +246,14 @@ private fun doggoMoveChanger(battlePokemon: BattlePokemon) {
         } else if (hasBehemoth) {
             when (speciesName) {
                 "zacian" -> {
-                    effectedPokemon.replaceMove("behemothblade", "ironhead")
+                    afterOnServer(seconds = 1.0F) {
+                        effectedPokemon.replaceMove("behemothblade", "ironhead")
+                    }
                 }
                 "zamazenta" -> {
-                    effectedPokemon.replaceMove("behemothbash", "ironhead")
+                    afterOnServer(seconds = 1.0F) {
+                        effectedPokemon.replaceMove("behemothbash", "ironhead")
+                    }
                 }
             }
         }

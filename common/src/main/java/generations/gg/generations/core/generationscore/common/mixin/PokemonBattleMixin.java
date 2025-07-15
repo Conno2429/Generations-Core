@@ -5,6 +5,7 @@ import com.cobblemon.mod.common.api.battles.model.actor.BattleActor;
 import com.cobblemon.mod.common.api.pokemon.feature.FlagSpeciesFeature;
 import com.cobblemon.mod.common.battles.BattleFormat;
 import com.cobblemon.mod.common.battles.BattleSide;
+import generations.gg.generations.core.generationscore.common.battle.BattleConditionsProcessor;
 import generations.gg.generations.core.generationscore.common.battle.GenerationsInstructionProcessor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -22,12 +23,12 @@ public abstract class PokemonBattleMixin {
 
     @Inject(method = "<init>", at = @At("TAIL"), remap = false)
     private void onConstruct(BattleFormat format, BattleSide side1, BattleSide side2, CallbackInfo ci) {
-//        this.setMute(false);
+        this.setMute(false);
     }
 
     @Inject(method = "end", at = @At("TAIL"), remap = false)
     private void injectEnd(CallbackInfo ci) {
+        BattleConditionsProcessor.processBattleEnd((PokemonBattle) (Object) this);
         GenerationsInstructionProcessor.processBattleEnd((PokemonBattle) (Object) this);
     }
-
 }

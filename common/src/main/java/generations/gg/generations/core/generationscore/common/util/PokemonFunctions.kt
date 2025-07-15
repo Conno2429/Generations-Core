@@ -5,6 +5,7 @@ import com.cobblemon.mod.common.api.pokemon.feature.*
 import com.cobblemon.mod.common.api.pokemon.stats.Stat
 import com.cobblemon.mod.common.api.pokemon.stats.Stats
 import com.cobblemon.mod.common.api.properties.CustomPokemonPropertyType
+import com.cobblemon.mod.common.api.scheduling.afterOnServer
 import com.cobblemon.mod.common.api.text.text
 import com.cobblemon.mod.common.pokemon.Pokemon
 import com.cobblemon.mod.common.pokemon.RenderablePokemon
@@ -62,28 +63,33 @@ fun Pokemon.removeMove(moveName: String) {
 }
 
 fun Pokemon.replaceMove(oldMove: String, newMove: String) {
-    for ((index, move) in moveSet.getMovesWithNulls().withIndex()) {
-        if (move != null && move.template.name.equals(oldMove)) {
-            val ppRatio = move.currentPp.toFloat() / move.maxPp
-            val newMoveMove = Moves.getByNameOrDummy(newMove).create()
-            newMoveMove.raisedPpStages = move.raisedPpStages
-            newMoveMove.currentPp = (ppRatio * newMoveMove.maxPp).toInt().coerceIn(0, newMoveMove.maxPp)
-            moveSet.setMove(index, newMoveMove)
-
-//            benchedMoves.doThenEmit {
-//                val iter = benchedMoves.iterator()
-//                while (iter.hasNext()) {
-//                    val benched = iter.next()
-//                    println("benched" + benched.moveTemplate.name)
-//                    if (benched.moveTemplate.name.equals(oldMove, ignoreCase = true)) {
-//                        iter.remove()
-//                    }
-//                }
-//            }
-
+    moveSet.getMovesWithNulls().forEachIndexed { index, move ->
+        if (move != null && move.template.name == oldMove) {
+            val ppRatio = if (move.maxPp > 0) move.currentPp.toFloat() / move.maxPp else 0f
+            val newMoveInstance = Moves.getByNameOrDummy(newMove).create().apply {
+                raisedPpStages = move.raisedPpStages
+                currentPp = (ppRatio * maxPp).toInt().coerceIn(0, maxPp)
+            }
+            moveSet.setMove(index, newMoveInstance)
             return
         }
     }
+}
+
+fun Pokemon.applyCosmeticFeature(feature: FlagSpeciesFeature) {
+    this.persistentData.putString("cosmetic_name", feature.name)
+    feature.apply(this)
+}
+
+fun Pokemon.removeCosmeticFeature() {
+    val data = this.persistentData
+
+    if (data.contains("cosmetic_name")) {
+        val name = data.getString("cosmetic_name").also { data.remove("cosmetic_name") }
+        features.removeIf { it.name == name }
+    }
+
+    updateAspects()
 }
 
 fun Pokemon.hasEmbeddedPokemon(): Boolean {
@@ -129,7 +135,7 @@ private fun Stat.color(): String {
 }
 
 private fun String.properCase(): String {
-    return this.get(0) + this.substring(1).toLowerCase()
+    return this.get(0) + this.substring(1).lowercase()
 }
 
 fun MutableList<Component>.add(pokemon: Pokemon) {

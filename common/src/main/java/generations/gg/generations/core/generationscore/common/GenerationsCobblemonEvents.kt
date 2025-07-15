@@ -10,8 +10,6 @@ import com.cobblemon.mod.common.api.events.CobblemonEvents.HELD_ITEM_POST
 import com.cobblemon.mod.common.api.events.CobblemonEvents.LOOT_DROPPED
 import com.cobblemon.mod.common.api.events.CobblemonEvents.POKEMON_INTERACTION_GUI_CREATION
 import com.cobblemon.mod.common.api.events.drops.LootDroppedEvent
-import com.cobblemon.mod.common.api.moves.Moves
-import com.cobblemon.mod.common.api.pokemon.feature.FlagSpeciesFeature
 import com.cobblemon.mod.common.api.text.text
 import com.cobblemon.mod.common.battles.actor.PlayerBattleActor
 import com.cobblemon.mod.common.client.gui.interact.wheel.InteractWheelOption
@@ -20,6 +18,11 @@ import com.cobblemon.mod.common.util.asTranslated
 import com.cobblemon.mod.common.util.cobblemonResource
 import com.cobblemon.mod.common.util.giveOrDropItemStack
 import generations.gg.generations.core.generationscore.common.api.player.Caught
+import generations.gg.generations.core.generationscore.common.battle.BattleConditionsProcessor
+import generations.gg.generations.core.generationscore.common.battle.BattleConditionsProcessor.getTypeName
+import generations.gg.generations.core.generationscore.common.battle.BattleConditionsProcessor.sendToPlayersAndSpectators
+import generations.gg.generations.core.generationscore.common.battle.BattleSideData
+import generations.gg.generations.core.generationscore.common.battle.ConditionsData
 import generations.gg.generations.core.generationscore.common.battle.GenerationsInstructionProcessor
 import generations.gg.generations.core.generationscore.common.client.render.rarecandy.instanceOrNull
 import generations.gg.generations.core.generationscore.common.config.LegendKeys
@@ -124,6 +127,23 @@ class GenerationsCobblemonEvents {
                 }
             }
 
+            CobblemonEvents.BATTLE_STARTED_POST.subscribe(Priority.NORMAL) {
+                val conditionsData = ConditionsData()
+                for (actor in it.battle.actors) {
+                    if (actor in it.battle.side1.actors) {
+                        conditionsData.sideList.add(BattleSideData("1", actor.getTypeName(), "legend"))
+                        println("Actor Side 1: ${actor.getTypeName()}")
+                    }
+                    if (actor in it.battle.side2.actors) {
+                        conditionsData.sideList.add(BattleSideData("2", actor.getTypeName(), "legend"))
+                        println("Actor Side 2: ${actor.getTypeName()}")
+                    }
+                }
+
+                BattleConditionsProcessor.conditionsDataMap[it.battle.battleId] = conditionsData
+                it.battle.sendToPlayersAndSpectators()
+            }
+
             FRIENDSHIP_UPDATED.subscribe {
                 var player = it.pokemon.getOwnerPlayer() ?: return@subscribe
 
@@ -146,6 +166,7 @@ class GenerationsCobblemonEvents {
                     HeadPatPacket(it.pokemonID).sendToServer()
                     Minecraft.getInstance().screen = null
                 }))
+
             }
 
             HELD_ITEM_POST.subscribe {
@@ -163,6 +184,7 @@ class GenerationsCobblemonEvents {
                 }
 
                 HeldItemFormeChange.ogerMaskChange(it)
+                HeldItemFormeChange.removeBehemoth(it)
             }
 
 

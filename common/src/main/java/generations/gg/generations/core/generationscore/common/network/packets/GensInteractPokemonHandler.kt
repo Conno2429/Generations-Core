@@ -1,0 +1,28 @@
+package generations.gg.generations.core.generationscore.common.network.packets
+
+import com.cobblemon.mod.common.api.net.ServerNetworkPacketHandler
+import com.cobblemon.mod.common.api.pokemon.feature.FlagSpeciesFeature
+import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
+import com.cobblemon.mod.common.util.party
+import generations.gg.generations.core.generationscore.common.util.applyCosmeticFeature
+import net.minecraft.server.MinecraftServer
+import net.minecraft.server.level.ServerPlayer
+
+object GensInteractPokemonHandler : ServerNetworkPacketHandler<GensInteractPokemonPacket> {
+    override fun handle(packet: GensInteractPokemonPacket, server: MinecraftServer, player: ServerPlayer) {
+        val pokemonEntity = player.serverLevel().getEntity(packet.pokemonID)
+        if (pokemonEntity is PokemonEntity && !pokemonEntity.isBattleClone()) {
+            if (packet.mountShoulder) {
+                if (!pokemonEntity.canSitOnShoulder() || player.party().none { it == pokemonEntity.pokemon }) {
+                    return
+                }
+                pokemonEntity.tryMountingShoulder(player)
+            } else if (packet.changeFormData.first) {
+                val feature = FlagSpeciesFeature(packet.changeFormData.second, true)
+                pokemonEntity.pokemon.applyCosmeticFeature(feature)
+            } else {
+                pokemonEntity.offerHeldItem(player, player.mainHandItem)
+            }
+        }
+    }
+}

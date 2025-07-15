@@ -143,6 +143,8 @@ object BattleOverlayProxy {
             dexState = dexState,
             passedSeconds = passedSeconds
         )
+
+        BattleConditionsOverlay.renderConditionsOverlay(context)
     }
 
     fun drawBattleTile(
