@@ -1,5 +1,6 @@
 package generations.gg.generations.core.generationscore.common.util
 
+import com.cobblemon.mod.common.Cobblemon.statProvider
 import com.cobblemon.mod.common.api.moves.Moves
 import com.cobblemon.mod.common.api.pokemon.feature.*
 import com.cobblemon.mod.common.api.pokemon.stats.Stat
@@ -76,9 +77,13 @@ fun Pokemon.replaceMove(oldMove: String, newMove: String) {
     }
 }
 
-fun Pokemon.applyCosmeticFeature(feature: FlagSpeciesFeature) {
+fun Pokemon.applyCosmeticFeature(feature: SpeciesFeature) {
     this.persistentData.putString("cosmetic_name", feature.name)
-    feature.apply(this)
+    if(feature is StringSpeciesFeature) {
+        feature.apply(this)
+    } else {
+        (feature as FlagSpeciesFeature).apply(this)
+    }
 }
 
 fun Pokemon.removeCosmeticFeature() {
@@ -166,8 +171,36 @@ fun ItemStack.getPokemon(): Pokemon? {
     return get(GenerationsDataComponents.EMBEDDED_POKEMON.value())
 }
 
+fun Pokemon.fixIVS() {
+    println("Name: ${this.species.name}")
+    val special = isLegendary() || isUltraBeast() || species.name == "ursaluna-bloodmoon" || species.name in setOf(
+        "Gouging Fire",
+        "Raging Bolt",
+        "Walking Wake",
+        "Iron Boulder",
+        "Iron Crown",
+        "Iron Leaves"
+    )
+    if (!special) return
 
+    var perfectIvCounter = 0
+    ivs.forEach { stat ->
+        if (stat.value == 31) perfectIvCounter++
+    }
 
+    if (perfectIvCounter >= 3) {
+        return
+    }
+
+    val indices = (0..5).shuffled().take(3)
+    val permaStats: Collection<Stat> = statProvider.ofType(Stat.Type.PERMANENT)
+
+    for ((index, stat) in permaStats.withIndex()) {
+        if (indices.contains(index)) {
+            this.ivs[stat] = 31
+        }
+    }
+}
 
 fun Pokemon.removeIfBelongs(player: Player): Boolean {
     return belongsTo(player) && storeCoordinates.get()?.remove() == true

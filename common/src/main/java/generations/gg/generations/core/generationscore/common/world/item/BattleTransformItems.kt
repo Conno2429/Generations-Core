@@ -1,10 +1,9 @@
 package generations.gg.generations.core.generationscore.common.world.item
 
-import generations.gg.generations.core.generationscore.common.world.item.GenerationsItems
 import net.minecraft.core.Holder
 import net.minecraft.world.item.Item
 
-val MEGA_STONES: Set<Holder<Item>> = setOf(
+val BATTLE_TRANSFORM_ITEMS: Set<Holder<Item>> = setOf(
     GenerationsItems.ABOMASITE,
     GenerationsItems.ABSOLITE,
     GenerationsItems.AERODACTYLITE,
@@ -51,5 +50,8 @@ val MEGA_STONES: Set<Holder<Item>> = setOf(
     GenerationsItems.STEELIXITE,
     GenerationsItems.SWAMPERTITE,
     GenerationsItems.TYRANITARITE,
-    GenerationsItems.VENUSAURITE
+    GenerationsItems.VENUSAURITE,
+    GenerationsItems.BLUE_ORB,
+    GenerationsItems.RED_ORB,
+    GenerationsItems.ULTRANECROZIUM_Z
 )

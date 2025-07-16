@@ -44,6 +44,7 @@ object GenerationsNetwork {
         list.add(PacketRegisterInfo(S2CSyncPlayerMoneyPacket.ID, ::S2CSyncPlayerMoneyPacket, S2CSyncPlayerMoneyHandler))
         list.add(PacketRegisterInfo(SpawnStatuePacket.ID, SpawnStatuePacket::decode, SpawnExtraDataEntityHandler()))
         list.add(PacketRegisterInfo(S2CPlaySoundPacket.ID, S2CPlaySoundPacket::decode, S2CPlaySoundHandler))
+        // TODO: remove TeraTypeUpdatePacket when its registered in Cobblemon's own network
         list.add(PacketRegisterInfo(TeraTypeUpdatePacket.ID, TeraTypeUpdatePacket::decode, PokemonUpdatePacketHandler()))
 
         return list;

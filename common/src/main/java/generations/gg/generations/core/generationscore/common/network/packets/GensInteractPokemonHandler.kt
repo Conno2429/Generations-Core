@@ -2,6 +2,8 @@ package generations.gg.generations.core.generationscore.common.network.packets
 
 import com.cobblemon.mod.common.api.net.ServerNetworkPacketHandler
 import com.cobblemon.mod.common.api.pokemon.feature.FlagSpeciesFeature
+import com.cobblemon.mod.common.api.pokemon.feature.SpeciesFeature
+import com.cobblemon.mod.common.api.pokemon.feature.StringSpeciesFeature
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
 import com.cobblemon.mod.common.util.party
 import generations.gg.generations.core.generationscore.common.util.applyCosmeticFeature
@@ -18,7 +20,13 @@ object GensInteractPokemonHandler : ServerNetworkPacketHandler<GensInteractPokem
                 }
                 pokemonEntity.tryMountingShoulder(player)
             } else if (packet.changeFormData.first) {
-                val feature = FlagSpeciesFeature(packet.changeFormData.second, true)
+                val feature: SpeciesFeature
+                if (packet.changeFormData.second != "ultra") {
+                    feature = FlagSpeciesFeature(packet.changeFormData.second, true)
+                } else {
+                    feature = StringSpeciesFeature("prism_fusion", packet.changeFormData.second)
+                }
+
                 pokemonEntity.pokemon.applyCosmeticFeature(feature)
             } else {
                 pokemonEntity.offerHeldItem(player, player.mainHandItem)

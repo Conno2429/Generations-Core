@@ -31,6 +31,7 @@ import generations.gg.generations.core.generationscore.common.event.HeldItemForm
 import generations.gg.generations.core.generationscore.common.network.packets.HeadPatPacket
 import generations.gg.generations.core.generationscore.common.tags.GenerationsItemTags.*
 import generations.gg.generations.core.generationscore.common.util.DataKeys
+import generations.gg.generations.core.generationscore.common.util.fixIVS
 import generations.gg.generations.core.generationscore.common.world.item.FormChanging
 import generations.gg.generations.core.generationscore.common.world.item.GenerationsItems
 import generations.gg.generations.core.generationscore.common.world.item.PostBattleUpdatingItem
@@ -100,6 +101,8 @@ class GenerationsCobblemonEvents {
                 val speciesKey = SpeciesKey.fromPokemon(event.pokemon)
                 Caught.get(event.player).accumulate(speciesKey)
 
+                val pokemon = event.pokemon
+                pokemon.fixIVS()
 
                 //Loot
 
