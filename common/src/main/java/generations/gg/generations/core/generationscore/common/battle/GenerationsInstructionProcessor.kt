@@ -1,5 +1,6 @@
 package generations.gg.generations.core.generationscore.common.battle
 
+import com.cobblemon.mod.common.Cobblemon
 import com.cobblemon.mod.common.CobblemonNetwork
 import com.cobblemon.mod.common.api.abilities.Abilities
 import com.cobblemon.mod.common.api.abilities.Ability
@@ -12,11 +13,17 @@ import com.cobblemon.mod.common.api.moves.Moves
 import com.cobblemon.mod.common.api.pokemon.feature.FlagSpeciesFeature
 import com.cobblemon.mod.common.api.pokemon.feature.SpeciesFeature
 import com.cobblemon.mod.common.api.pokemon.feature.StringSpeciesFeature
+import com.cobblemon.mod.common.api.scheduling.afterOnServer
 import com.cobblemon.mod.common.battles.pokemon.BattlePokemon
 import com.cobblemon.mod.common.net.messages.client.battle.BattleInitializePacket
 import com.cobblemon.mod.common.net.messages.client.battle.BattleTransformPokemonPacket
+import com.cobblemon.mod.common.net.messages.client.pokemon.update.BenchedMovesUpdatePacket
 import com.cobblemon.mod.common.pokemon.Pokemon
+import com.cobblemon.mod.common.util.getPlayer
 import com.cobblemon.mod.common.util.server
+import generations.gg.generations.core.generationscore.common.battle.ExpAllCalculator.calculateMultiplier
+import generations.gg.generations.core.generationscore.common.battle.ExpAllCalculator.hasExpAll
+import generations.gg.generations.core.generationscore.common.util.removeCosmeticFeature
 import generations.gg.generations.core.generationscore.common.util.replaceMove
 import java.util.UUID
 
@@ -81,9 +88,10 @@ object GenerationsInstructionProcessor {
     @JvmStatic
     fun processTerastallization(terastallizationEvent: TerastallizationEvent) {
         val battle = terastallizationEvent.battle
-        val teraCheck = FlagSpeciesFeature("terastal_active", true)
         val pokemon = terastallizationEvent.pokemon
-        terastallizationEvent.pokemon.effectedPokemon.applyBattleFeature(teraCheck)
+        val teraCheck = FlagSpeciesFeature("terastal_active", true)
+        val teraType = StringSpeciesFeature("tera_type", "tera_${pokemon.originalPokemon.teraType.id.path}")
+        teraCheck.apply(pokemon.effectedPokemon)
 
         val active = battle.activePokemon.find {
             it.battlePokemon?.uuid == pokemon.uuid || it.battlePokemon?.effectedPokemon?.uuid == pokemon.uuid
@@ -93,10 +101,21 @@ object GenerationsInstructionProcessor {
         if (pnx != null) {
             (battle.playerUUIDs + battle.spectators).forEach { viewer ->
                 val isAlly = battle.isAllied(viewer, pokemon.actor)
-                println("UUID: " + viewer)
                 val packet = BattleTransformPokemonPacket(pnx, updated, isAlly)
+
                 getPlayerFromUUID(viewer)?.let { CobblemonNetwork.sendPacketToPlayer(it, packet) }
             }
+
+            afterOnServer(2.5f) {
+                teraType.apply(pokemon.effectedPokemon)
+                (battle.playerUUIDs + battle.spectators).forEach { viewer ->
+                    val isAlly = battle.isAllied(viewer, pokemon.actor)
+                    val packet = BattleTransformPokemonPacket(pnx, updated, isAlly)
+
+                    getPlayerFromUUID(viewer)?.let { CobblemonNetwork.sendPacketToPlayer(it, packet) }
+                }
+            }
+
         }
 
         battle.dispatchWaitingToFront(2.5f) { Unit }
@@ -107,7 +126,13 @@ object GenerationsInstructionProcessor {
         val battle = battleStartedPreEvent.battle
         for (actors in battle.actors) {
             for (battlePokemon in actors.pokemonList) {
-                doggoMoveChanger(battlePokemon)
+                battlePokemon.originalPokemon.removeCosmeticFeature()
+                if (battlePokemon.originalPokemon.species.name == "Zacian" || battlePokemon.originalPokemon.species.name == "Zamazenta") {
+                    val hasBehemoth = battlePokemon.moveSet.any { it.template.name.contains("behemoth") }
+                    if (!hasBehemoth) {
+                        doggoMoveChanger(battlePokemon)
+                    }
+                }
             }
         }
     }
@@ -115,10 +140,32 @@ object GenerationsInstructionProcessor {
     @JvmStatic
     fun processBattleEnd(battle: PokemonBattle) {
         battle.actors.forEach { actor ->
+            val faintedPokemonList = actor.pokemonList.filter { it.health <= 0}
+
+            actor.getSide().getOppositeSide().actors.forEach { opponent ->
+                val hasExpAll = opponent.uuid.getPlayer()?.hasExpAll()
+                if (hasExpAll == true) {
+                    val opponentNonFaintedPokemonList = opponent.pokemonList.filter {it.health > 0}
+                    faintedPokemonList.forEach { faintedPokemon ->
+                        for (opponentPokemon in opponentNonFaintedPokemonList) {
+                            val multiplier = opponentPokemon.calculateMultiplier()
+                            val experience = Cobblemon.experienceCalculator.calculate(opponentPokemon, faintedPokemon, multiplier)
+                            if (experience > 0 && actor.pokemonList.all { it.health <= 0}) {
+                                opponent.awardExperience(opponentPokemon, experience)
+                            }
+                        }
+                    }
+                }
+
+            }
+
             if (!actor.getPlayerUUIDs().iterator().hasNext()) return@forEach
             actor.pokemonList.forEach { battlePokemon ->
                 val tempAbility = battlePokemon.originalPokemon.ability
                 val data = battlePokemon.effectedPokemon.persistentData
+
+                battlePokemon.effectedPokemon.features.removeIf { it.name == "tera_type" }
+                battlePokemon.effectedPokemon.features.removeIf { it.name == "terastal_active"}
 
                 val name = if(data.contains("form_name")) data.getString("form_name") else ""
                 battlePokemon.originalPokemon.removeBattleFeature()
@@ -152,7 +199,6 @@ private fun Pokemon.removeBattleFeature() {
         val name = data.getString("terastal")
         features.removeIf {it.name == name}
         data.remove("terastal")
-        data.remove("tera_type")
     }
 
     if (data.contains("form_name")) {
@@ -175,8 +221,7 @@ private fun Pokemon.removeBattleFeature() {
 
 private fun Pokemon.applyBattleFeature(feature: SpeciesFeature) {
     if (feature.name.equals("terastal_active")) {
-        this.persistentData.putString("terastal", feature.name)
-        this.persistentData.putString("tera_type", this.teraType.id.path)
+        this.persistentData.putString("terastal_active", feature.name)
     } else {
         this.persistentData.putString("form_name", feature.name)
     }
@@ -213,9 +258,6 @@ private fun getPlayerFromUUID(uuid: UUID): ServerPlayer? {
 
 private fun doggoMoveChanger(battlePokemon: BattlePokemon) {
     val effectedPokemon = battlePokemon.effectedPokemon
-    val ironHead = Moves.getByNameOrDummy("ironhead")
-    val behemothBlade = Moves.getByNameOrDummy("behemothblade")
-    val behemothBash = Moves.getByNameOrDummy("behemothbash")
 
     val speciesName = battlePokemon.originalPokemon.species.name.lowercase()
 
@@ -226,17 +268,12 @@ private fun doggoMoveChanger(battlePokemon: BattlePokemon) {
     if (effectedPokemon.aspects.contains("crowned")) {
         val benchedMoves = effectedPokemon.benchedMoves
 
-        println("PRE-CLEAR")
-        benchedMoves.forEach {
-            println("benchedmove: " + it.moveTemplate.name)
+        for (benchedMove in benchedMoves) {
+            if (benchedMove.moveTemplate.name == "behemothblade" || benchedMove.moveTemplate.name == "behemothbash") {
+                benchedMoves.remove(benchedMove)
+            }
         }
 
-        benchedMoves.clear()
-
-        println("POST-CLEAR")
-        benchedMoves.forEach {
-            println("benchedmove: " + it.moveTemplate.name)
-        }
         if (hasIronHead) {
             when (speciesName) {
                 "zacian" -> effectedPokemon.replaceMove("ironhead", "behemothblade")
@@ -245,10 +282,14 @@ private fun doggoMoveChanger(battlePokemon: BattlePokemon) {
         } else if (hasBehemoth) {
             when (speciesName) {
                 "zacian" -> {
-                    effectedPokemon.replaceMove("behemothblade", "ironhead")
+                    afterOnServer(seconds = 1.0F) {
+                        effectedPokemon.replaceMove("behemothblade", "ironhead")
+                    }
                 }
                 "zamazenta" -> {
-                    effectedPokemon.replaceMove("behemothbash", "ironhead")
+                    afterOnServer(seconds = 1.0F) {
+                        effectedPokemon.replaceMove("behemothbash", "ironhead")
+                    }
                 }
             }
         }

@@ -1,4 +1,4 @@
-package generations.gg.generations.core.generationscore.common
+package generations.gg.generations.core.generationscore.common.event
 
 import com.cobblemon.mod.common.CobblemonEntities
 import com.cobblemon.mod.common.api.dialogue.Dialogue
@@ -6,6 +6,7 @@ import com.cobblemon.mod.common.api.dialogue.Dialogues
 import com.cobblemon.mod.common.api.events.CobblemonEvents
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
 import com.cobblemon.mod.common.util.openDialogue
+import generations.gg.generations.core.generationscore.common.GenerationsCore
 import generations.gg.generations.core.generationscore.common.api.events.TriState
 import generations.gg.generations.core.generationscore.common.api.events.general.EntityEvents
 import generations.gg.generations.core.generationscore.common.api.events.general.InteractionEvents
@@ -15,7 +16,7 @@ import generations.gg.generations.core.generationscore.common.world.item.Generat
 import generations.gg.generations.core.generationscore.common.world.item.GenerationsItems
 import generations.gg.generations.core.generationscore.common.world.level.block.ElevatorBlock
 import generations.gg.generations.core.generationscore.common.world.level.block.GenerationsShrines
-import generations.gg.generations.core.generationscore.common.world.level.block.GenerationsUtilityBlocks.SCARECROW
+import generations.gg.generations.core.generationscore.common.world.level.block.GenerationsUtilityBlocks
 import generations.gg.generations.core.generationscore.common.world.level.block.entities.VendingMachineBlock
 import generations.gg.generations.core.generationscore.common.world.level.block.shrines.RegiShrineBlock
 import net.minecraft.core.Direction
@@ -36,14 +37,14 @@ object GenerationsArchitecturyEvents {
             val level = it.ctx.world
             if(entity.type == CobblemonEntities.POKEMON || entity.type == GenerationsEntities.ZYGARDE_CELL) {
 
-                val list = RegiShrineBlock.searchForBlock(
+                val list = RegiShrineBlock.Companion.searchForBlock(
                     level,
                     entity.blockPosition(),
                     GenerationsCore.CONFIG.blocks.scarecrowRadius.x,
                     GenerationsCore.CONFIG.blocks.scarecrowRadius.y,
                     GenerationsCore.CONFIG.blocks.scarecrowRadius.z,
                     1
-                ) { world, pos -> world.getBlockState(pos).`is`(SCARECROW.value()) }
+                ) { world, pos -> world.getBlockState(pos).`is`(GenerationsUtilityBlocks.SCARECROW.value()) }
                 if (list.isNotEmpty()) {
                     it.cancel()
                 }
@@ -108,5 +109,6 @@ object GenerationsArchitecturyEvents {
 
             return@subscribe
         }
+
     }
 }

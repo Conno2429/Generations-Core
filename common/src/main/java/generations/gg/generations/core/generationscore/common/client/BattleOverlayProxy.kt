@@ -7,6 +7,7 @@ import com.cobblemon.mod.common.api.pokemon.feature.FlagSpeciesFeature
 import com.cobblemon.mod.common.api.text.bold
 import com.cobblemon.mod.common.api.text.text
 import com.cobblemon.mod.common.api.types.tera.TeraType
+import com.cobblemon.mod.common.api.types.tera.TeraTypes
 import com.cobblemon.mod.common.client.CobblemonClient
 import com.cobblemon.mod.common.client.CobblemonResources
 import com.cobblemon.mod.common.client.battle.ActiveClientBattlePokemon
@@ -124,7 +125,7 @@ object BattleOverlayProxy {
             level = battlePokemon.level,
             displayName = battlePokemon.displayName,
             gender = battlePokemon.gender,
-            teraType = if (battlePokemon.state.currentAspects.contains("terastal_active")) truePokemon?.teraType else null,
+            teraType = resolveTeraType(battlePokemon.state.currentAspects),
             status = battlePokemon.status,
             state = battlePokemon.state,
             colour = Triple(r, g, b),
@@ -143,6 +144,8 @@ object BattleOverlayProxy {
             dexState = dexState,
             passedSeconds = passedSeconds
         )
+
+        BattleConditionsOverlay.renderConditionsOverlay(context)
     }
 
     fun drawBattleTile(
@@ -181,7 +184,7 @@ object BattleOverlayProxy {
         val portraitDiameter = if (isCompact) COMPACT_PORTRAIT_DIAMETER else PORTRAIT_DIAMETER
         val infoOffsetX = if (isCompact) COMPACT_INFO_OFFSET_X else INFO_OFFSET_X
         val portraitStartX = x + if (!reversed) portraitOffsetX else { tileWidth - portraitDiameter - portraitOffsetX }
-        val teraStartX = x + if (!reversed) teraXOffset else { tileWidth - teraDiameter - teraXOffset }
+        val teraStartX = x + if (!reversed) teraXOffset else { tileWidth - teraDiameter - 61 }
         val matrixStack = context.pose()
         blitk(
             matrixStack = matrixStack,
@@ -413,8 +416,8 @@ object BattleOverlayProxy {
 
         TeraTypeIcon(
             teraStartX, teraYOffset, teraType, small = true, opacity = opacity
-
         ).render(context)
+        println("Tera Type: $teraType for $species")
     }
 
     private fun drawPokeBall(

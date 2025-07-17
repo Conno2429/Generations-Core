@@ -1,10 +1,12 @@
 package generations.gg.generations.core.generationscore.common.util
 
+import com.cobblemon.mod.common.Cobblemon.statProvider
 import com.cobblemon.mod.common.api.moves.Moves
 import com.cobblemon.mod.common.api.pokemon.feature.*
 import com.cobblemon.mod.common.api.pokemon.stats.Stat
 import com.cobblemon.mod.common.api.pokemon.stats.Stats
 import com.cobblemon.mod.common.api.properties.CustomPokemonPropertyType
+import com.cobblemon.mod.common.api.scheduling.afterOnServer
 import com.cobblemon.mod.common.api.text.text
 import com.cobblemon.mod.common.pokemon.Pokemon
 import com.cobblemon.mod.common.pokemon.RenderablePokemon
@@ -62,28 +64,37 @@ fun Pokemon.removeMove(moveName: String) {
 }
 
 fun Pokemon.replaceMove(oldMove: String, newMove: String) {
-    for ((index, move) in moveSet.getMovesWithNulls().withIndex()) {
-        if (move != null && move.template.name.equals(oldMove)) {
-            val ppRatio = move.currentPp.toFloat() / move.maxPp
-            val newMoveMove = Moves.getByNameOrDummy(newMove).create()
-            newMoveMove.raisedPpStages = move.raisedPpStages
-            newMoveMove.currentPp = (ppRatio * newMoveMove.maxPp).toInt().coerceIn(0, newMoveMove.maxPp)
-            moveSet.setMove(index, newMoveMove)
-
-//            benchedMoves.doThenEmit {
-//                val iter = benchedMoves.iterator()
-//                while (iter.hasNext()) {
-//                    val benched = iter.next()
-//                    println("benched" + benched.moveTemplate.name)
-//                    if (benched.moveTemplate.name.equals(oldMove, ignoreCase = true)) {
-//                        iter.remove()
-//                    }
-//                }
-//            }
-
+    moveSet.getMovesWithNulls().forEachIndexed { index, move ->
+        if (move != null && move.template.name == oldMove) {
+            val ppRatio = if (move.maxPp > 0) move.currentPp.toFloat() / move.maxPp else 0f
+            val newMoveInstance = Moves.getByNameOrDummy(newMove).create().apply {
+                raisedPpStages = move.raisedPpStages
+                currentPp = (ppRatio * maxPp).toInt().coerceIn(0, maxPp)
+            }
+            moveSet.setMove(index, newMoveInstance)
             return
         }
     }
+}
+
+fun Pokemon.applyCosmeticFeature(feature: SpeciesFeature) {
+    this.persistentData.putString("cosmetic_name", feature.name)
+    if(feature is StringSpeciesFeature) {
+        feature.apply(this)
+    } else {
+        (feature as FlagSpeciesFeature).apply(this)
+    }
+}
+
+fun Pokemon.removeCosmeticFeature() {
+    val data = this.persistentData
+
+    if (data.contains("cosmetic_name")) {
+        val name = data.getString("cosmetic_name").also { data.remove("cosmetic_name") }
+        features.removeIf { it.name == name }
+    }
+
+    updateAspects()
 }
 
 fun Pokemon.hasEmbeddedPokemon(): Boolean {
@@ -160,8 +171,36 @@ fun ItemStack.getPokemon(): Pokemon? {
     return get(GenerationsDataComponents.EMBEDDED_POKEMON.value())
 }
 
+fun Pokemon.fixIVS() {
+    println("Name: ${this.species.name}")
+    val special = isLegendary() || isUltraBeast() || species.name == "ursaluna-bloodmoon" || species.name in setOf(
+        "Gouging Fire",
+        "Raging Bolt",
+        "Walking Wake",
+        "Iron Boulder",
+        "Iron Crown",
+        "Iron Leaves"
+    )
+    if (!special) return
 
+    var perfectIvCounter = 0
+    ivs.forEach { stat ->
+        if (stat.value == 31) perfectIvCounter++
+    }
 
+    if (perfectIvCounter >= 3) {
+        return
+    }
+
+    val indices = (0..5).shuffled().take(3)
+    val permaStats: Collection<Stat> = statProvider.ofType(Stat.Type.PERMANENT)
+
+    for ((index, stat) in permaStats.withIndex()) {
+        if (indices.contains(index)) {
+            this.ivs[stat] = 31
+        }
+    }
+}
 
 fun Pokemon.removeIfBelongs(player: Player): Boolean {
     return belongsTo(player) && storeCoordinates.get()?.remove() == true
