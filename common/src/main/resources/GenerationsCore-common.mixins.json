@@ -10,6 +10,7 @@
     "BestSpawnConfigMixin",
     "FishingHookMixin",
     "GivePokemonMixin",
+    "JukeboxSongPlayerMixin",
     "MoveTypeMixin",
     "NbtUtilsMixin",
     "PokemonBattleMixin",
