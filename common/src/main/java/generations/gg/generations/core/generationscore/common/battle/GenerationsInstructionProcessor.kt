@@ -90,9 +90,9 @@ object GenerationsInstructionProcessor {
         val battle = terastallizationEvent.battle
         val pokemon = terastallizationEvent.pokemon
         val teraCheck = FlagSpeciesFeature("terastal_active", true)
-        val teraType = StringSpeciesFeature("tera_type", pokemon.originalPokemon.teraType.id.path)
-        terastallizationEvent.pokemon.effectedPokemon.applyBattleFeature(teraCheck)
-        println("Tera Type Server: $teraType")
+        val teraType = StringSpeciesFeature("tera_type", "tera_${pokemon.originalPokemon.teraType.id.path}")
+        teraCheck.apply(pokemon.effectedPokemon)
+
         val active = battle.activePokemon.find {
             it.battlePokemon?.uuid == pokemon.uuid || it.battlePokemon?.effectedPokemon?.uuid == pokemon.uuid
         }
@@ -101,8 +101,8 @@ object GenerationsInstructionProcessor {
         if (pnx != null) {
             (battle.playerUUIDs + battle.spectators).forEach { viewer ->
                 val isAlly = battle.isAllied(viewer, pokemon.actor)
-                println("UUID: " + viewer)
                 val packet = BattleTransformPokemonPacket(pnx, updated, isAlly)
+
                 getPlayerFromUUID(viewer)?.let { CobblemonNetwork.sendPacketToPlayer(it, packet) }
             }
 
@@ -110,8 +110,8 @@ object GenerationsInstructionProcessor {
                 teraType.apply(pokemon.effectedPokemon)
                 (battle.playerUUIDs + battle.spectators).forEach { viewer ->
                     val isAlly = battle.isAllied(viewer, pokemon.actor)
-                    println("UUID: " + viewer)
                     val packet = BattleTransformPokemonPacket(pnx, updated, isAlly)
+
                     getPlayerFromUUID(viewer)?.let { CobblemonNetwork.sendPacketToPlayer(it, packet) }
                 }
             }
@@ -144,18 +144,13 @@ object GenerationsInstructionProcessor {
 
             actor.getSide().getOppositeSide().actors.forEach { opponent ->
                 val hasExpAll = opponent.uuid.getPlayer()?.hasExpAll()
-                println("hasExpALl: " + hasExpAll)
                 if (hasExpAll == true) {
-                    println("passed expAll check")
                     val opponentNonFaintedPokemonList = opponent.pokemonList.filter {it.health > 0}
                     faintedPokemonList.forEach { faintedPokemon ->
-                        println("faintedpokemon: ${faintedPokemon.getName()}")
                         for (opponentPokemon in opponentNonFaintedPokemonList) {
-                            println("opponent xp gain: ${opponentPokemon.getName()}")
                             val multiplier = opponentPokemon.calculateMultiplier()
                             val experience = Cobblemon.experienceCalculator.calculate(opponentPokemon, faintedPokemon, multiplier)
                             if (experience > 0 && actor.pokemonList.all { it.health <= 0}) {
-                                println("experience and health check")
                                 opponent.awardExperience(opponentPokemon, experience)
                             }
                         }
@@ -170,6 +165,7 @@ object GenerationsInstructionProcessor {
                 val data = battlePokemon.effectedPokemon.persistentData
 
                 battlePokemon.effectedPokemon.features.removeIf { it.name == "tera_type" }
+                battlePokemon.effectedPokemon.features.removeIf { it.name == "terastal_active"}
 
                 val name = if(data.contains("form_name")) data.getString("form_name") else ""
                 battlePokemon.originalPokemon.removeBattleFeature()
@@ -225,7 +221,7 @@ private fun Pokemon.removeBattleFeature() {
 
 private fun Pokemon.applyBattleFeature(feature: SpeciesFeature) {
     if (feature.name.equals("terastal_active")) {
-        this.persistentData.putString("terastal", feature.name)
+        this.persistentData.putString("terastal_active", feature.name)
     } else {
         this.persistentData.putString("form_name", feature.name)
     }
