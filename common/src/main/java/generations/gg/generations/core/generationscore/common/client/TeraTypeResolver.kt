@@ -8,7 +8,7 @@ fun resolveTeraType(aspects: Set<String>): TeraType? {
         println("Aspect: $aspect")
     }
     TeraTypes.forEach { teraType ->
-        if (aspects.contains(teraType.id.path)) return teraType
+        if (aspects.contains("tera_${teraType.id.path}")) return teraType
     }
     return null
 }

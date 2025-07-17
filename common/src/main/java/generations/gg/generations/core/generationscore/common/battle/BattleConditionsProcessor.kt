@@ -1,6 +1,5 @@
 package generations.gg.generations.core.generationscore.common.battle
 
-import com.cobblemon.mod.common.api.battles.interpreter.BattleContext
 import com.cobblemon.mod.common.api.battles.interpreter.BattleMessage
 import com.cobblemon.mod.common.api.battles.model.PokemonBattle
 import com.cobblemon.mod.common.api.battles.model.actor.BattleActor
@@ -198,17 +197,13 @@ object BattleConditionsProcessor {
                 if (abilityName.canDisableWeather()) weatherDisablingAbility = true
             }
 
-            val originalDisabled = conditionsData.weatherTracker.disabled
-
             if (weatherDisablingAbility && !neutGasPresent) {
                 conditionsData.weatherTracker.disabled = true
             } else {
                 conditionsData.weatherTracker.disabled = false
             }
 
-            if (conditionsData.weatherTracker.disabled != originalDisabled) {
-                battle.sendToPlayersAndSpectators()
-            }
+            battle.sendToPlayersAndSpectators()
         }
     }
 

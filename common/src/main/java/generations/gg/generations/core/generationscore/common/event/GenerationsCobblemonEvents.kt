@@ -1,14 +1,9 @@
-package generations.gg.generations.core.generationscore.common
+package generations.gg.generations.core.generationscore.common.event
 
 import com.cobblemon.mod.common.Cobblemon
 import com.cobblemon.mod.common.api.Priority
 import com.cobblemon.mod.common.api.battles.model.actor.ActorType
 import com.cobblemon.mod.common.api.events.CobblemonEvents
-import com.cobblemon.mod.common.api.events.CobblemonEvents.BATTLE_VICTORY
-import com.cobblemon.mod.common.api.events.CobblemonEvents.FRIENDSHIP_UPDATED
-import com.cobblemon.mod.common.api.events.CobblemonEvents.HELD_ITEM_POST
-import com.cobblemon.mod.common.api.events.CobblemonEvents.LOOT_DROPPED
-import com.cobblemon.mod.common.api.events.CobblemonEvents.POKEMON_INTERACTION_GUI_CREATION
 import com.cobblemon.mod.common.api.events.drops.LootDroppedEvent
 import com.cobblemon.mod.common.api.text.text
 import com.cobblemon.mod.common.battles.actor.PlayerBattleActor
@@ -17,6 +12,7 @@ import com.cobblemon.mod.common.client.gui.interact.wheel.Orientation
 import com.cobblemon.mod.common.util.asTranslated
 import com.cobblemon.mod.common.util.cobblemonResource
 import com.cobblemon.mod.common.util.giveOrDropItemStack
+import generations.gg.generations.core.generationscore.common.GenerationsCore
 import generations.gg.generations.core.generationscore.common.api.player.Caught
 import generations.gg.generations.core.generationscore.common.battle.BattleConditionsProcessor
 import generations.gg.generations.core.generationscore.common.battle.BattleConditionsProcessor.getTypeName
@@ -27,15 +23,13 @@ import generations.gg.generations.core.generationscore.common.battle.Generations
 import generations.gg.generations.core.generationscore.common.client.render.rarecandy.instanceOrNull
 import generations.gg.generations.core.generationscore.common.config.LegendKeys
 import generations.gg.generations.core.generationscore.common.config.SpeciesKey
-import generations.gg.generations.core.generationscore.common.event.HeldItemFormeChange
 import generations.gg.generations.core.generationscore.common.network.packets.HeadPatPacket
-import generations.gg.generations.core.generationscore.common.tags.GenerationsItemTags.*
+import generations.gg.generations.core.generationscore.common.tags.GenerationsItemTags
 import generations.gg.generations.core.generationscore.common.util.DataKeys
 import generations.gg.generations.core.generationscore.common.util.fixIVS
 import generations.gg.generations.core.generationscore.common.world.item.FormChanging
 import generations.gg.generations.core.generationscore.common.world.item.GenerationsItems
 import generations.gg.generations.core.generationscore.common.world.item.PostBattleUpdatingItem
-import generations.gg.generations.core.generationscore.common.world.item.PostBattleUpdatingItem.BattleData
 import net.minecraft.client.Minecraft
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.ItemStack
@@ -64,13 +58,13 @@ class GenerationsCobblemonEvents {
 //
 //            }
 
-            BATTLE_VICTORY.subscribe(Priority.HIGH) { event ->
-                val data = mutableListOf<BattleData>()
+            CobblemonEvents.BATTLE_VICTORY.subscribe(Priority.HIGH) { event ->
+                val data = mutableListOf<PostBattleUpdatingItem.BattleData>()
 
                 event.losers.forEach { actor1 ->
                     val isNpc = actor1.type == ActorType.NPC
                     actor1.pokemonList.stream()
-                        .map { BattleData(isNpc, it.effectedPokemon, "") }.forEach(data::add)
+                        .map { PostBattleUpdatingItem.BattleData(isNpc, it.effectedPokemon, "") }.forEach(data::add)
                 }
 
                 event.winners.stream()
@@ -98,7 +92,7 @@ class GenerationsCobblemonEvents {
             }
 
             CobblemonEvents.POKEMON_CAPTURED.subscribe(Priority.HIGH) { event ->
-                val speciesKey = SpeciesKey.fromPokemon(event.pokemon)
+                val speciesKey = SpeciesKey.Companion.fromPokemon(event.pokemon)
                 Caught.get(event.player).accumulate(speciesKey)
 
                 val pokemon = event.pokemon
@@ -110,7 +104,7 @@ class GenerationsCobblemonEvents {
                 var drops = table.getDrops().toMutableList()
                 var player = event.player
 
-                LOOT_DROPPED.postThen(
+                CobblemonEvents.LOOT_DROPPED.postThen(
                     event = LootDroppedEvent(table, player, null, drops),
                     ifSucceeded = { it.drops.forEach { it.drop(null, player.serverLevel(), player.position(), player) } }
                 )
@@ -123,10 +117,10 @@ class GenerationsCobblemonEvents {
 
                     keyItems.removeAll(gimmackItems)
 
-                    if(it.inventory.contains(KEY_STONES)) keyItems.add(cobblemonResource("key_stone"))
-                    if(it.inventory.contains(DYNAMAX_BANDS)) keyItems.add(cobblemonResource("dynamax_band"))
-                    if(it.inventory.contains(TERA_ORBS)) keyItems.add(cobblemonResource("tera_orb"))
-                    if(it.inventory.contains(Z_RINGS)) keyItems.add(cobblemonResource("z_ring"))
+                    if(it.inventory.contains(GenerationsItemTags.KEY_STONES)) keyItems.add(cobblemonResource("key_stone"))
+                    if(it.inventory.contains(GenerationsItemTags.DYNAMAX_BANDS)) keyItems.add(cobblemonResource("dynamax_band"))
+                    if(it.inventory.contains(GenerationsItemTags.TERA_ORBS)) keyItems.add(cobblemonResource("tera_orb"))
+                    if(it.inventory.contains(GenerationsItemTags.Z_RINGS)) keyItems.add(cobblemonResource("z_ring"))
                 }
             }
 
@@ -147,7 +141,7 @@ class GenerationsCobblemonEvents {
                 it.battle.sendToPlayersAndSpectators()
             }
 
-            FRIENDSHIP_UPDATED.subscribe {
+            CobblemonEvents.FRIENDSHIP_UPDATED.subscribe {
                 var player = it.pokemon.getOwnerPlayer() ?: return@subscribe
 
                 if(it.newFriendship >= Cobblemon.config.maxPokemonFriendship && it.pokemon.species.resourceIdentifier == LegendKeys.MANAPHY.species) {
@@ -161,18 +155,22 @@ class GenerationsCobblemonEvents {
                 }
             }
 
-            POKEMON_INTERACTION_GUI_CREATION.subscribe {
+            CobblemonEvents.POKEMON_INTERACTION_GUI_CREATION.subscribe {
 
-                it.addOption(Orientation.BOTTOM_LEFT, InteractWheelOption(
-                    iconResource = GenerationsCore.id("textures/ui/interact/head_pat.png"),
-                    tooltipText = "generations_core.ui.interact.head_pat", colour = { Vector3f(1F, 0F, 0F) }, onPress = {
-                    HeadPatPacket(it.pokemonID).sendToServer()
-                    Minecraft.getInstance().screen = null
-                }))
+                it.addOption(
+                    Orientation.BOTTOM_LEFT, InteractWheelOption(
+                        iconResource = GenerationsCore.id("textures/ui/interact/head_pat.png"),
+                        tooltipText = "generations_core.ui.interact.head_pat",
+                        colour = { Vector3f(1F, 0F, 0F) },
+                        onPress = {
+                            HeadPatPacket(it.pokemonID).sendToServer()
+                            Minecraft.getInstance().screen = null
+                        })
+                )
 
             }
 
-            HELD_ITEM_POST.subscribe {
+            CobblemonEvents.HELD_ITEM_POST.subscribe {
 
                 it.returned.item.instanceOrNull<FormChanging>()?.let { formChanging ->
                     if(formChanging.process(it.pokemon, true)) {
@@ -194,7 +192,7 @@ class GenerationsCobblemonEvents {
 
 //            CobblemonEvents.POKEMON_ENTITY_SPAWN.subscribe { it.entity.taskBuilder().infiniteIterations().identifier("castform") }
 
-            LOOT_DROPPED.subscribe(Priority.HIGHEST) {
+            CobblemonEvents.LOOT_DROPPED.subscribe(Priority.HIGHEST) {
 
             }
         }
