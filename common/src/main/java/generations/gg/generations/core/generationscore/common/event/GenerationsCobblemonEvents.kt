@@ -6,6 +6,7 @@ import com.cobblemon.mod.common.api.battles.model.actor.ActorType
 import com.cobblemon.mod.common.api.events.CobblemonEvents
 import com.cobblemon.mod.common.api.events.drops.LootDroppedEvent
 import com.cobblemon.mod.common.api.text.text
+import com.cobblemon.mod.common.api.types.tera.TeraTypes
 import com.cobblemon.mod.common.battles.actor.PlayerBattleActor
 import com.cobblemon.mod.common.client.gui.interact.wheel.InteractWheelOption
 import com.cobblemon.mod.common.client.gui.interact.wheel.Orientation
@@ -97,6 +98,10 @@ class GenerationsCobblemonEvents {
 
                 val pokemon = event.pokemon
                 pokemon.fixIVS()
+
+                if (pokemon.species.name == "Terapagos" || pokemon.teraType != TeraTypes.STELLAR) {
+                    pokemon.teraType = TeraTypes.STELLAR
+                }
 
                 //Loot
 

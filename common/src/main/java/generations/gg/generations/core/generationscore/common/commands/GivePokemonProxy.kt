@@ -12,6 +12,7 @@ package generations.gg.generations.core.generationscore.common.commands
 import com.cobblemon.mod.common.Cobblemon
 import com.cobblemon.mod.common.api.permission.CobblemonPermissions
 import com.cobblemon.mod.common.api.text.red
+import com.cobblemon.mod.common.api.types.tera.TeraTypes
 import com.cobblemon.mod.common.command.argument.PokemonPropertiesArgumentType
 import com.cobblemon.mod.common.util.alias
 import com.cobblemon.mod.common.util.commandLang
@@ -66,6 +67,10 @@ object GivePokemonProxy {
             val userSpecifiedAnyIV = pokemonProperties.ivs?.any { it.value != 0 } == true
             if (!userSpecifiedAnyIV) {
                 pokemon.fixIVS()
+            }
+
+            if (pokemon.species.name == "Terapagos" || pokemon.teraType != TeraTypes.STELLAR) {
+                pokemon.teraType == TeraTypes.STELLAR
             }
 
             party.add(pokemon)

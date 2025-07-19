@@ -66,7 +66,6 @@ object GenerationsInstructionProcessor {
             "wellspring-tera", "hearthflame-tera", "cornerstone-tera", "teal-tera" -> "embody_aspect" to true
             else -> name to true
         } ?: let {
-            battlePokemon.originalPokemon.removeBattleFeature()
             battlePokemon.effectedPokemon.removeBattleFeature()
             return
         }
@@ -79,8 +78,22 @@ object GenerationsInstructionProcessor {
         }?.let {
             battle.dispatchGo {
                 battlePokemon.entity
-                battlePokemon.originalPokemon.applyBattleFeature(it)
                 battlePokemon.effectedPokemon.applyBattleFeature(it)
+                val active = battle.activePokemon.find {
+                    it.battlePokemon?.uuid == battlePokemon.uuid || it.battlePokemon?.effectedPokemon?.uuid == battlePokemon.uuid
+                }
+                val updated = battlePokemon
+                val pnx = active?.getPNX()
+                if (pnx != null) {
+                    (battle.playerUUIDs + battle.spectators).forEach { viewer ->
+                        val isAlly = battle.isAllied(viewer, battlePokemon.actor)
+                        val packet = BattleTransformPokemonPacket(pnx, updated, isAlly)
+
+                        getPlayerFromUUID(viewer)
+                            ?.let { CobblemonNetwork.sendPacketToPlayer(it, packet) }
+                        println("test packet form change")
+                    }
+                }
             }
         }
     }
@@ -168,19 +181,16 @@ object GenerationsInstructionProcessor {
                 battlePokemon.effectedPokemon.features.removeIf { it.name == "terastal_active"}
 
                 val name = if(data.contains("form_name")) data.getString("form_name") else ""
-                battlePokemon.originalPokemon.removeBattleFeature()
                 battlePokemon.effectedPokemon.removeBattleFeature()
 
                 if (battlePokemon.effectedPokemon.species.name.equals("Terapagos")) {
                     StringSpeciesFeature("tera_form", "normal").apply(battlePokemon.effectedPokemon)
-                    StringSpeciesFeature("tera_form", "normal").apply(battlePokemon.originalPokemon)
                     battlePokemon.originalPokemon.updateAspects()
                 }
                 if (battlePokemon.effectedPokemon.species.name.equals("Necrozma")) {
                     val necroForm = battlePokemon.originalPokemon.persistentData.getString("necro_fusion")
                     if (!necroForm.isNullOrBlank()) {
                         val necroFeature = StringSpeciesFeature("prism_fusion", necroForm)
-                        necroFeature.apply(battlePokemon.originalPokemon)
                         necroFeature.apply(battlePokemon.effectedPokemon)
                         battlePokemon.originalPokemon.updateAspects()
                     }
@@ -192,7 +202,7 @@ object GenerationsInstructionProcessor {
     }
 }
 
-private fun Pokemon.removeBattleFeature() {
+fun Pokemon.removeBattleFeature() {
     val data = this.persistentData
 
     if (data.contains("terastal")) {
