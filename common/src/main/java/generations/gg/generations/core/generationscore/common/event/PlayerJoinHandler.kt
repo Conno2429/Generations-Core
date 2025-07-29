@@ -17,7 +17,7 @@ object PlayerJoinHandler {
 
             if (pokemon.species.name.equals("Terapagos")) {
                 if (pokemon.teraType != TeraTypes.STELLAR) {
-                    pokemon.teraType == TeraTypes.STELLAR
+                    pokemon.teraType = TeraTypes.STELLAR
                 }
 
                 StringSpeciesFeature("tera_form", "normal").apply(pokemon)

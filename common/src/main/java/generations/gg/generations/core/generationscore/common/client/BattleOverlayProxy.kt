@@ -126,7 +126,7 @@ object BattleOverlayProxy {
             species = battlePokemon.species,
             pokemon = truePokemon,
             level = battlePokemon.level,
-            displayName = battlePokemon.displayName,
+            displayName = truePokemon?.nickname ?: battlePokemon.displayName,
             gender = battlePokemon.gender,
             teraType = resolveTeraType(battlePokemon.state.currentAspects),
             status = battlePokemon.status,
@@ -425,7 +425,6 @@ object BattleOverlayProxy {
         TeraTypeIcon(
             teraStartX, teraYOffset, teraType, small = true, opacity = opacity
         ).render(context)
-        println("Tera Type: $teraType for $species")
     }
 
     private fun drawPokeBall(

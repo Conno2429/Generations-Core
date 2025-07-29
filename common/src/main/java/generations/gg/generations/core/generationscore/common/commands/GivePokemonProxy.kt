@@ -69,11 +69,12 @@ object GivePokemonProxy {
                 pokemon.fixIVS()
             }
 
-            if (pokemon.species.name == "Terapagos" || pokemon.teraType != TeraTypes.STELLAR) {
-                pokemon.teraType == TeraTypes.STELLAR
+            if (pokemon.species.name == "Terapagos" && pokemon.teraType != TeraTypes.STELLAR) {
+                pokemon.teraType = TeraTypes.STELLAR
             }
 
             party.add(pokemon)
+
             context.source.sendSuccess({ commandLang("${NAME}.give", pokemon.species.translatedName, player.name) }, true)
         } catch (e: Exception) {
             e.printStackTrace()
