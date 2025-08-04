@@ -319,7 +319,7 @@ object GenerationsPlacedFeatures {
             context,
             ORE_MEGASTONE,
             configuredFeatureRegistryEntryLookup.getOrThrow(GenerationsConfiguredFeatures.ORE_MEGASTONE),
-            GenerationsOrePlacements.rareOrePlacement(
+            GenerationsOrePlacements.commonOrePlacement(
                 20, HeightRangePlacement.triangle(
                     VerticalAnchor.absolute(-64), VerticalAnchor.absolute(0)
                 )
@@ -329,27 +329,29 @@ object GenerationsPlacedFeatures {
             context,
             ORE_Z_CRYSTAL,
             configuredFeatureRegistryEntryLookup.getOrThrow(GenerationsConfiguredFeatures.ORE_Z_CRYSTAL),
-            GenerationsOrePlacements.rareOrePlacement(
+            GenerationsOrePlacements.commonOrePlacement(
                 20, HeightRangePlacement.triangle(
                     VerticalAnchor.absolute(-64), VerticalAnchor.absolute(0)
                 )
             )
         )
+
         register(
             context,
             ORE_METEORITE,
             configuredFeatureRegistryEntryLookup.getOrThrow(GenerationsConfiguredFeatures.ORE_METEORITE),
-            GenerationsOrePlacements.rareOrePlacement(
+            GenerationsOrePlacements.commonOrePlacement(
                 20, HeightRangePlacement.triangle(
                     VerticalAnchor.absolute(-64), VerticalAnchor.absolute(0)
                 )
             )
         )
+
         register(
             context,
             ORE_TERASHARD,
             configuredFeatureRegistryEntryLookup.getOrThrow(GenerationsConfiguredFeatures.ORE_TERASHARD),
-            GenerationsOrePlacements.rareOrePlacement(
+            GenerationsOrePlacements.commonOrePlacement(
                 20, HeightRangePlacement.triangle(
                     VerticalAnchor.absolute(-64), VerticalAnchor.absolute(0)
                 )
